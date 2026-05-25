@@ -16,20 +16,17 @@ Fullstack leaderboard application for creating score entries and browsing them w
 
 ```text
 .
-├── src/                  # NestJS backend
-├── prisma/               # Prisma schema and migrations
-├── frontend/             # React/Vite frontend
-├── docker-compose.yml    # Local PostgreSQL
-└── Dockerfile            # Backend production image
+|-- backend/   # NestJS backend, Prisma, Dockerfile
+|-- frontend/  # React/Vite frontend
+`-- README.md
 ```
 
 ## Local Development
 
 ### Backend
 
-Run from the repository root:
-
 ```bash
+cd backend
 npm install
 docker compose up -d
 npx prisma migrate dev --name init
@@ -48,11 +45,9 @@ npm run dev
 
 The frontend runs on `http://localhost:5173` by default.
 
-If you prefer using the root package scripts for local development, you can also run `npm run dev` from the repository root.
-
 ## Environment Variables
 
-### Backend `.env.example`
+### Backend `backend/.env.example`
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/leaderboard_db?schema=public"
@@ -76,7 +71,7 @@ Creates a leaderboard entry.
 
 ```json
 {
-  "name": "Віталій",
+  "name": "Vitalii",
   "score": 100
 }
 ```
@@ -121,9 +116,10 @@ Set `FRONTEND_URL` in the backend hosting provider to the deployed frontend URL 
 
 Set `VITE_API_URL` in the frontend hosting provider to the deployed backend URL before building the frontend.
 
-Build the backend from the repository root:
+Build the backend from `backend/`:
 
 ```bash
+cd backend
 npm install
 npm run prisma:generate
 npm run build
