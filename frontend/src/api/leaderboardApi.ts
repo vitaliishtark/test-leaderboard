@@ -28,18 +28,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getLeaderboard({
-  page,
-  limit,
-  sortOrder,
-}: GetLeaderboardParams): Promise<PaginatedLeaderboardResponse> {
+export function getLeaderboard(
+  { page, limit, sortOrder }: GetLeaderboardParams,
+  signal?: AbortSignal,
+): Promise<PaginatedLeaderboardResponse> {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
     sortOrder,
   });
 
-  return request<PaginatedLeaderboardResponse>(`/leaderboard?${params}`);
+  return request<PaginatedLeaderboardResponse>(`/leaderboard?${params}`, {
+    signal,
+  });
 }
 
 export function createLeaderboardEntry(

@@ -2,6 +2,7 @@ import {
   Alert,
   Box,
   CircularProgress,
+  LinearProgress,
   Paper,
   Table,
   TableBody,
@@ -13,38 +14,83 @@ import {
   TableSortLabel,
   Typography,
 } from "@mui/material";
+import { useEffect, useState } from "react";
+import { getLeaderboard } from "../api/leaderboardApi";
 import type { LeaderboardEntry } from "../types/leaderboard";
 
 interface LeaderboardTableProps {
-  entries: LeaderboardEntry[];
-  error: string | null;
-  isLoading: boolean;
-  page: number;
-  rowsPerPage: number;
-  sortOrder: "asc" | "desc";
-  total: number;
-  onPageChange: (page: number) => void;
-  onRowsPerPageChange: (rowsPerPage: number) => void;
-  onSortChange: () => void;
+  refreshKey: number;
 }
 
-export function LeaderboardTable({
-  entries,
-  error,
-  isLoading,
-  page,
-  rowsPerPage,
-  sortOrder,
-  total,
-  onPageChange,
-  onRowsPerPageChange,
-  onSortChange,
-}: LeaderboardTableProps) {
+export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchLeaderboard = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await getLeaderboard(
+          {
+            page: page + 1,
+            limit: rowsPerPage,
+            sortOrder,
+          },
+          controller.signal,
+        );
+
+        setEntries(response.data);
+        setTotal(response.meta.total);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setError(
+          error instanceof Error ? error.message : "Failed to load leaderboard",
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void fetchLeaderboard();
+
+    return () => controller.abort();
+  }, [page, rowsPerPage, sortOrder, refreshKey]);
+
+  const handleRowsPerPageChange = (nextRowsPerPage: number) => {
+    setRowsPerPage(nextRowsPerPage);
+    setPage(0);
+  };
+
+  const handleSortChange = () => {
+    setSortOrder((currentSortOrder) =>
+      currentSortOrder === "desc" ? "asc" : "desc",
+    );
+    setPage(0);
+  };
+
+  const isInitialLoading = isLoading && entries.length === 0;
+
   return (
     <Paper
       elevation={0}
       sx={{ overflow: "hidden", border: "1px solid #ddd1c2" }}
     >
+      {isLoading && !isInitialLoading ? <LinearProgress /> : null}
+
       {error ? (
         <Alert severity="error" sx={{ borderRadius: 0 }}>
           {error}
@@ -61,7 +107,7 @@ export function LeaderboardTable({
                 <TableSortLabel
                   active
                   direction={sortOrder}
-                  onClick={onSortChange}
+                  onClick={handleSortChange}
                 >
                   Score
                 </TableSortLabel>
@@ -70,7 +116,7 @@ export function LeaderboardTable({
             </TableRow>
           </TableHead>
           <TableBody>
-            {isLoading ? (
+            {isInitialLoading ? (
               <TableRow>
                 <TableCell colSpan={4}>
                   <Box
@@ -96,7 +142,7 @@ export function LeaderboardTable({
               </TableRow>
             ) : null}
 
-            {!isLoading
+            {!isInitialLoading
               ? entries.map((entry, index) => (
                   <TableRow hover key={entry.id}>
                     <TableCell>{page * rowsPerPage + index + 1}</TableCell>
@@ -121,9 +167,9 @@ export function LeaderboardTable({
         page={page}
         rowsPerPage={rowsPerPage}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        onPageChange={(_, nextPage) => onPageChange(nextPage)}
+        onPageChange={(_, nextPage) => setPage(nextPage)}
         onRowsPerPageChange={(event) =>
-          onRowsPerPageChange(Number(event.target.value))
+          handleRowsPerPageChange(Number(event.target.value))
         }
       />
     </Paper>
